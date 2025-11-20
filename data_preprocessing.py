@@ -339,7 +339,7 @@ def main():
     # Set parameters
     DATASET_PATH = 'asl_dataset'
     IMG_SIZE = (64, 64)  # Adjust based on your needs
-    GRAYSCALE = False  # Set to True if you want grayscale images
+    GRAYSCALE = True  # Set to True if you want grayscale images
     
     # Initialize preprocessor
     preprocessor = ASLDataPreprocessor(
@@ -355,6 +355,11 @@ def main():
         normalize=True,
         grayscale=GRAYSCALE
     )
+    
+    # Add channel dimension for grayscale images if needed
+    if GRAYSCALE and len(X.shape) == 3:
+        X = np.expand_dims(X, axis=-1)
+        print(f"Added channel dimension. New shape: {X.shape}")
     
     # Split dataset
     X_train, X_val, X_test, y_train, y_val, y_test = preprocessor.split_dataset(X, y, stratify=True)
