@@ -16,7 +16,7 @@ MODEL_PATH = "checkpoints/best_model_20251120_165941.keras"
 METADATA_PATH = "processed_data/metadata.json"
 IMG_SIZE = (64, 64)
 PADDING = 40
-CONFIDENCE_THRESHOLD = 0.5
+CONFIDENCE_THRESHOLD = 0.3  # Lowered from 0.5 to see more predictions
 
 # Load metadata
 with open(METADATA_PATH, 'r') as f:
@@ -108,6 +108,9 @@ def preprocess_for_model(roi):
     # Add batch dimension (1, 64, 64, 1)
     roi_batch = np.expand_dims(roi_processed, axis=0)
     
+    # Debug: Print shape and value range
+    print(f"Input shape: {roi_batch.shape}, Min: {roi_batch.min():.3f}, Max: {roi_batch.max():.3f}")
+    
     return roi_batch
 
 def predict_sign(roi):
@@ -122,6 +125,9 @@ def predict_sign(roi):
     predicted_class_idx = np.argmax(predictions[0])
     confidence = predictions[0][predicted_class_idx]
     predicted_label = class_names[predicted_class_idx]
+    
+    # Debug: Print prediction details
+    print(f"Predicted: {predicted_label} with confidence: {confidence:.3f}")
     
     # Get top 3 predictions
     top_3_indices = np.argsort(predictions[0])[-3:][::-1]
@@ -171,7 +177,7 @@ while True:
         # Crop ROI
         roi = frame_no_bg[y1:y2, x1:x2]
         
-        if roi.size > 0:
+        if roi.size > 0 and roi.shape[0] > 0 and roi.shape[1] > 0:
             # Make prediction
             predicted_label, confidence, top_3 = predict_sign(roi)
             
@@ -183,23 +189,26 @@ while True:
             # Get most common prediction in history
             most_common = Counter(prediction_history).most_common(1)[0][0]
             
-            # Display prediction
-            if confidence > CONFIDENCE_THRESHOLD:
-                # Main prediction
-                text = f"{most_common.upper()} ({confidence*100:.1f}%)"
-                cv2.putText(display_frame, text, (x1, y1 - 10),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
-                
-                # Display top 3 predictions
-                y_offset = 30
-                for i, (label, conf) in enumerate(top_3):
-                    text = f"{i+1}. {label.upper()}: {conf*100:.1f}%"
-                    cv2.putText(display_frame, text, (10, y_offset),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                    y_offset += 30
+            # Display prediction - ALWAYS show it, even with low confidence
+            # Main prediction with color based on confidence
+            if confidence > 0.7:
+                color = (0, 255, 0)  # Green for high confidence
+            elif confidence > 0.5:
+                color = (0, 165, 255)  # Orange for medium confidence
             else:
-                cv2.putText(display_frame, "Low Confidence", (x1, y1 - 10),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                color = (0, 0, 255)  # Red for low confidence
+            
+            text = f"{most_common.upper()} ({confidence*100:.1f}%)"
+            cv2.putText(display_frame, text, (x1, y1 - 10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+            
+            # Display top 3 predictions
+            y_offset = 30
+            for i, (label, conf) in enumerate(top_3):
+                text = f"{i+1}. {label.upper()}: {conf*100:.1f}%"
+                cv2.putText(display_frame, text, (10, y_offset),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                y_offset += 30
             
             # Show preprocessed ROI (for debugging)
             roi_preview = cv2.resize(roi, (150, 150))
