@@ -5,9 +5,25 @@ Run this script to train the model with default or custom parameters
 
 from cnn_model import ASLCNNModel
 import argparse
+from pathlib import Path
 
 
-def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_rate=0.001):
+def find_latest_checkpoint(checkpoint_dir='checkpoints'):
+    """
+    Return the most recent checkpoint file in the given directory.
+    """
+    ckpt_dir = Path(checkpoint_dir)
+    if not ckpt_dir.exists():
+        return None
+    checkpoints = sorted(
+        ckpt_dir.glob("best_model_*.keras"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return checkpoints[0] if checkpoints else None
+
+
+def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_rate=0.001, resume_from=None):
     """
     Train the ASL recognition model
     
@@ -16,6 +32,7 @@ def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_
         epochs: Number of training epochs
         batch_size: Batch size for training
         learning_rate: Learning rate for optimizer
+        resume_from: Optional checkpoint path to resume from. If None, will try the latest checkpoint.
     """
     
     print("="*70)
@@ -35,6 +52,14 @@ def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_
     model.build_model(architecture=architecture)
     model.get_model_summary()
     model.compile_model(learning_rate=learning_rate, optimizer='adam')
+
+    # Resume from checkpoint if available/requested
+    checkpoint_to_load = Path(resume_from) if resume_from else find_latest_checkpoint()
+    if checkpoint_to_load and checkpoint_to_load.exists():
+        model.load_model_weights(str(checkpoint_to_load))
+        print(f"Resuming training from checkpoint: {checkpoint_to_load}")
+    else:
+        print("No checkpoint loaded; training from scratch.")
     
     # Load data
     X_train, X_val, X_test, y_train, y_val, y_test = model.load_data('processed_data')
@@ -94,6 +119,9 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='Learning rate (default: 0.001)')
     
+    parser.add_argument('--resume_from', type=str, default=None,
+                        help='Path to checkpoint to resume from (default: latest in checkpoints/)')
+    
     args = parser.parse_args()
     
     # Train the model
@@ -101,5 +129,6 @@ if __name__ == "__main__":
         architecture=args.architecture,
         epochs=args.epochs,
         batch_size=args.batch_size,
-        learning_rate=args.learning_rate
+        learning_rate=args.learning_rate,
+        resume_from=args.resume_from
     )

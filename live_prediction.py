@@ -3,6 +3,12 @@ ASL Real-Time Prediction
 Uses trained model with MediaPipe hand detection and background removal
 """
 
+import os
+
+# Force CPU path for MediaPipe in headless environments
+os.environ.setdefault("MEDIAPIPE_DISABLE_GPU", "1")
+os.environ.setdefault("GLOG_minloglevel", "2")
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -12,7 +18,8 @@ import json
 from collections import Counter
 
 # CONFIGURATION
-MODEL_PATH = "checkpoints/best_model_20251120_165941.keras"
+# Use latest checkpoint from training (Nov 26 run)
+MODEL_PATH = "checkpoints/best_model_20251126_150135.keras"
 METADATA_PATH = "processed_data/metadata.json"
 IMG_SIZE = (64, 64)
 PADDING = 40
