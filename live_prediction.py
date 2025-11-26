@@ -82,9 +82,9 @@ def remove_background(frame, hand_landmarks):
     # Fill the hull with white (hand region)
     cv2.fillConvexPoly(mask, hull, 255)
     
-    # Dilate mask slightly to include hand edges
-    kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.dilate(mask, kernel, iterations=2)
+    # Dilate mask to include hand edges
+    kernel = np.ones((10, 10), np.uint8)  # Increased from (5,5) to (10,10)
+    mask = cv2.dilate(mask, kernel, iterations=3)  # Increased from 2 to 3
     
     # Apply mask: keep hand, make background black
     result = cv2.bitwise_and(frame, frame, mask=mask)
@@ -92,9 +92,12 @@ def remove_background(frame, hand_landmarks):
     return result
 
 def preprocess_for_model(roi):
-    """Preprocess the ROI to match training data format"""
-    # Convert to grayscale
-    roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    """Preprocess the ROI to match training data format EXACTLY"""
+    # Convert BGR to RGB first (matching training pipeline)
+    roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+    
+    # Then convert RGB to grayscale (matching training pipeline)
+    roi_gray = cv2.cvtColor(roi_rgb, cv2.COLOR_RGB2GRAY)
     
     # Resize to model input size
     roi_resized = cv2.resize(roi_gray, IMG_SIZE)

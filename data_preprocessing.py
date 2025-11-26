@@ -1,5 +1,5 @@
 """
-ASL Dataset Preprocessing Script
+ASL Dataset Preprocessing Script with MediaPipe Background Removal
 Prepares the ASL hand gesture dataset for CNN model training
 """
 
@@ -13,13 +13,14 @@ from sklearn.preprocessing import LabelEncoder
 import cv2
 from pathlib import Path
 import json
+import mediapipe as mp
 
 class ASLDataPreprocessor:
     """
     Preprocessor class for ASL hand gesture recognition dataset
     """
     
-    def __init__(self, dataset_path, img_size=(64, 64), test_size=0.2, val_size=0.1, random_state=42):
+    def __init__(self, dataset_path, img_size=(64, 64), test_size=0.2, val_size=0.1, random_state=42, use_background_removal=True):
         """
         Initialize the preprocessor
         
@@ -29,12 +30,24 @@ class ASLDataPreprocessor:
             test_size: Proportion of dataset for testing
             val_size: Proportion of training set for validation
             random_state: Random seed for reproducibility
+            use_background_removal: Whether to apply MediaPipe background removal
         """
         self.dataset_path = Path(dataset_path)
         self.img_size = img_size
         self.test_size = test_size
         self.val_size = val_size
         self.random_state = random_state
+        self.use_background_removal = use_background_removal
+        
+        # Initialize MediaPipe Hands if background removal is enabled
+        if self.use_background_removal:
+            self.mp_hands = mp.solutions.hands
+            self.hands = self.mp_hands.Hands(
+                static_image_mode=True,
+                max_num_hands=1,
+                min_detection_confidence=0.5
+            )
+            print("✓ MediaPipe Hands initialized for background removal")
         
         # Define class names (0-9, a-z)
         self.class_names = [str(i) for i in range(10)] + [chr(i) for i in range(ord('a'), ord('z') + 1)]
@@ -43,6 +56,58 @@ class ASLDataPreprocessor:
         
         print(f"Initialized preprocessor for {len(self.class_names)} classes")
         print(f"Classes: {self.class_names}")
+        print(f"Background removal: {'ENABLED' if use_background_removal else 'DISABLED'}")
+    
+    def remove_background(self, image):
+        """
+        Remove background using MediaPipe hand detection.
+        Sets background to black (matching live prediction).
+        
+        Args:
+            image: BGR image
+            
+        Returns:
+            Image with background removed (BGR format)
+        """
+        # Convert BGR to RGB for MediaPipe
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Process with MediaPipe
+        results = self.hands.process(rgb_image)
+        
+        if not results.multi_hand_landmarks:
+            # No hand detected, return original image
+            return image
+        
+        # Create mask
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        
+        # Get hand landmarks
+        hand_landmarks = results.multi_hand_landmarks[0]
+        h, w = image.shape[:2]
+        
+        # Get all landmark points
+        points = []
+        for landmark in hand_landmarks.landmark:
+            x = int(landmark.x * w)
+            y = int(landmark.y * h)
+            points.append([x, y])
+        
+        # Create convex hull around hand
+        points = np.array(points, dtype=np.int32)
+        hull = cv2.convexHull(points)
+        
+        # Fill the hull with white (hand region)
+        cv2.fillConvexPoly(mask, hull, 255)
+        
+        # Dilate mask to include hand edges
+        kernel = np.ones((10, 10), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=3)
+        
+        # Apply mask: keep hand, make background black
+        result = cv2.bitwise_and(image, image, mask=mask)
+        
+        return result
     
     def load_and_preprocess_images(self, normalize=True, grayscale=False):
         """
@@ -60,6 +125,8 @@ class ASLDataPreprocessor:
         images = []
         labels = []
         image_paths = []
+        
+        skipped_count = 0
         
         print("Loading images from dataset...")
         
@@ -81,7 +148,17 @@ class ASLDataPreprocessor:
                     
                     if img is None:
                         print(f"Warning: Could not load {img_path}")
+                        skipped_count += 1
                         continue
+                    
+                    # Apply background removal if enabled
+                    if self.use_background_removal:
+                        img = self.remove_background(img)
+                        
+                        # Check if image is completely black (no hand detected)
+                        if np.sum(img) == 0:
+                            skipped_count += 1
+                            continue
                     
                     # Convert BGR to RGB
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -103,6 +180,7 @@ class ASLDataPreprocessor:
                     
                 except Exception as e:
                     print(f"Error processing {img_path}: {e}")
+                    skipped_count += 1
                     continue
         
         # Convert to numpy arrays
@@ -111,11 +189,12 @@ class ASLDataPreprocessor:
         
         print(f"\nDataset loaded successfully!")
         print(f"Total images: {len(X)}")
+        print(f"Skipped images: {skipped_count}")
         print(f"Image shape: {X.shape}")
         print(f"Data type: {X.dtype}")
         
         return X, y, image_paths
-    
+
     def encode_labels(self, labels):
         """
         Encode string labels to integers
@@ -334,12 +413,13 @@ class ASLDataPreprocessor:
 
 def main():
     """
-    Main function to demonstrate data preprocessing pipeline
+    Main function to demonstrate data preprocessing pipeline with background removal
     """
     # Set parameters
     DATASET_PATH = 'asl_dataset'
-    IMG_SIZE = (64, 64)  # Adjust based on your needs
-    GRAYSCALE = True  # Set to True if you want grayscale images
+    IMG_SIZE = (64, 64)
+    GRAYSCALE = True
+    USE_BACKGROUND_REMOVAL = True  # Enable background removal to match live prediction
     
     # Initialize preprocessor
     preprocessor = ASLDataPreprocessor(
@@ -347,7 +427,8 @@ def main():
         img_size=IMG_SIZE,
         test_size=0.2,
         val_size=0.1,
-        random_state=42
+        random_state=42,
+        use_background_removal=USE_BACKGROUND_REMOVAL
     )
     
     # Load and preprocess images
@@ -372,7 +453,7 @@ def main():
         print(f"  Class '{decoded_label}': {count} images")
     
     # Plot class distribution
-    preprocessor.plot_class_distribution(y_train, title="Training Set Class Distribution", save_path="train_distribution.png")
+    preprocessor.plot_class_distribution(y_train, title="Training Set Class Distribution (With Background Removal)", save_path="train_distribution.png")
     
     # Visualize sample images
     preprocessor.visualize_samples(X_train, y_train, num_samples=16, save_path="sample_images.png")
@@ -380,13 +461,17 @@ def main():
     # Save processed data
     preprocessor.save_processed_data(X_train, X_val, X_test, y_train, y_val, y_test)
     
+    # Close MediaPipe
+    if preprocessor.use_background_removal:
+        preprocessor.hands.close()
+    
     print("\n" + "="*50)
-    print("Data preprocessing completed successfully!")
+    print("Data preprocessing with background removal completed!")
     print("="*50)
     print("\nNext steps:")
     print("1. The processed data is saved in 'processed_data/' directory")
-    print("2. You can now use this data to train your CNN model")
-    print("3. Load the data using: preprocessor.load_processed_data('processed_data')")
+    print("2. Run train.py to retrain your model with background-removed images")
+    print("3. The new model will match your live prediction preprocessing")
 
 
 if __name__ == "__main__":
