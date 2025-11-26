@@ -8,15 +8,21 @@ import cv2
 import os
 import mediapipe as mp
 import time
+import numpy as np
 from datetime import datetime
 
 # CONFIGURATION
 OUTPUT_DIR = "custom_dataset"
 PADDING = 40
 
-# Setup
+# Setup - Enable hand segmentation
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5)
+hands = mp_hands.Hands(
+    static_image_mode=False, 
+    max_num_hands=1, 
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5
+)
 mp_drawing = mp.solutions.drawing_utils
 
 def get_square_bbox(landmarks, frame_w, frame_h, padding=PADDING):
@@ -37,6 +43,38 @@ def get_square_bbox(landmarks, frame_w, frame_h, padding=PADDING):
         x_max += (height - width) // 2
         
     return max(0, x_min), max(0, y_min), min(frame_w, x_max), min(frame_h, y_max)
+
+def remove_background(frame, hand_landmarks):
+    """
+    Remove background and keep only the hand region.
+    Sets background to black (matching training data).
+    """
+    # Create mask from hand landmarks
+    mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+    
+    # Get all landmark points
+    h, w = frame.shape[:2]
+    points = []
+    for landmark in hand_landmarks.landmark:
+        x = int(landmark.x * w)
+        y = int(landmark.y * h)
+        points.append([x, y])
+    
+    # Create convex hull around hand
+    points = np.array(points, dtype=np.int32)
+    hull = cv2.convexHull(points)
+    
+    # Fill the hull with white (hand region)
+    cv2.fillConvexPoly(mask, hull, 255)
+    
+    # Dilate mask slightly to include hand edges
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=2)
+    
+    # Apply mask: keep hand, make background black
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+    
+    return result
 
 # Ask for label
 label = input("Enter the letter you are recording (e.g. 'A'): ").upper()
@@ -75,12 +113,19 @@ while True:
         # CAPTURE LOGIC
         if cv2.waitKey(1) & 0xFF == ord(' '):
             if x2 > x1 and y2 > y1:
-                roi = frame[y1:y2, x1:x2]
-                # Resize slightly to verify content, but save raw size usually
-                # We save high quality crop
+                # Remove background from the frame
+                frame_no_bg = remove_background(frame, lm)
+                
+                # Crop the region of interest
+                roi = frame_no_bg[y1:y2, x1:x2]
+                
+                # Convert to grayscale (matching training data)
+                roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                
+                # Save the processed image
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                 filename = f"{save_path}/{label}_{timestamp}.jpg"
-                cv2.imwrite(filename, roi)
+                cv2.imwrite(filename, roi_gray)
                 
                 existing_count += 1
                 cv2.putText(display_frame, "RECORDING", (50, 50), 
