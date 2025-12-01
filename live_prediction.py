@@ -30,9 +30,31 @@ with open(METADATA_PATH, 'r') as f:
     metadata = json.load(f)
 class_names = metadata['class_names']
 
-# Load trained model
+# Load trained model with custom object scope to handle compatibility
 print("Loading trained model...")
-model = tf.keras.models.load_model(MODEL_PATH)
+try:
+    # Try loading directly first
+    model = tf.keras.models.load_model(MODEL_PATH)
+except (ValueError, TypeError) as e:
+    print(f"Direct loading failed: {e}")
+    print("Attempting to load with compatibility fixes...")
+    
+    # Load with custom objects to handle batch_shape -> shape conversion
+    import keras
+    from keras.layers import InputLayer
+    
+    # Create a custom InputLayer that handles batch_shape
+    class CompatibleInputLayer(InputLayer):
+        def __init__(self, batch_shape=None, shape=None, **kwargs):
+            if batch_shape is not None and shape is None:
+                # Convert batch_shape to shape (remove batch dimension)
+                shape = batch_shape[1:]
+            super().__init__(shape=shape, **kwargs)
+    
+    # Register custom layer
+    with keras.utils.custom_object_scope({'InputLayer': CompatibleInputLayer}):
+        model = tf.keras.models.load_model(MODEL_PATH)
+
 print(f"✓ Model loaded successfully!")
 print(f"Classes: {class_names}\n")
 
