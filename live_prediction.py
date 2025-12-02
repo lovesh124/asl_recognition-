@@ -1,7 +1,3 @@
-"""
-ASL Real-Time Prediction
-Uses trained model with MediaPipe hand detection and background removal
-"""
 
 import os
 
@@ -18,7 +14,7 @@ import json
 from collections import Counter
 
 # CONFIGURATION
-# Use latest checkpoint from training (Nov 26 run)
+
 MODEL_PATH = "checkpoints/best_model_20251126_150135.keras"
 METADATA_PATH = "processed_data/metadata.json"
 IMG_SIZE = (64, 64)
@@ -55,7 +51,7 @@ except (ValueError, TypeError) as e:
     with keras.utils.custom_object_scope({'InputLayer': CompatibleInputLayer}):
         model = tf.keras.models.load_model(MODEL_PATH)
 
-print(f"✓ Model loaded successfully!")
+print(f" Model loaded successfully!")
 print(f"Classes: {class_names}\n")
 
 # Setup MediaPipe
@@ -89,10 +85,7 @@ def get_square_bbox(landmarks, frame_w, frame_h, padding=PADDING):
     return max(0, x_min), max(0, y_min), min(frame_w, x_max), min(frame_h, y_max)
 
 def remove_background(frame, hand_landmarks):
-    """
-    Remove background and keep only the hand region.
-    Sets background to black (matching training data).
-    """
+    
     # Create mask from hand landmarks
     mask = np.zeros(frame.shape[:2], dtype=np.uint8)
     
@@ -121,7 +114,7 @@ def remove_background(frame, hand_landmarks):
     return result
 
 def preprocess_for_model(roi):
-    """Preprocess the ROI to match training data format EXACTLY"""
+    
     # Convert BGR to RGB first (matching training pipeline)
     roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
     
@@ -146,7 +139,7 @@ def preprocess_for_model(roi):
     return roi_batch
 
 def predict_sign(roi):
-    """Make prediction on the preprocessed ROI"""
+    
     # Preprocess
     input_data = preprocess_for_model(roi)
     
@@ -168,7 +161,7 @@ def predict_sign(roi):
     return predicted_label, confidence, top_3_predictions
 
 # Start webcam
-print("Starting webcam...")
+print("Starting webcam")
 print("Press 'Q' to quit\n")
 
 cap = cv2.VideoCapture(0)
@@ -263,4 +256,4 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 hands.close()
-print("\n✓ Application closed")
+print("\n Application closed")

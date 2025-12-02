@@ -1,7 +1,4 @@
-"""
-ASL Dataset Preprocessing Script with MediaPipe Background Removal
-Prepares the ASL hand gesture dataset for CNN model training
-"""
+
 
 import os
 import numpy as np
@@ -16,22 +13,9 @@ import json
 import mediapipe as mp
 
 class ASLDataPreprocessor:
-    """
-    Preprocessor class for ASL hand gesture recognition dataset
-    """
     
     def __init__(self, dataset_path, img_size=(64, 64), test_size=0.2, val_size=0.1, random_state=42, use_background_removal=True):
-        """
-        Initialize the preprocessor
-        
-        Args:
-            dataset_path: Path to the asl_dataset folder
-            img_size: Target image size (height, width)
-            test_size: Proportion of dataset for testing
-            val_size: Proportion of training set for validation
-            random_state: Random seed for reproducibility
-            use_background_removal: Whether to apply MediaPipe background removal
-        """
+       
         self.dataset_path = Path(dataset_path)
         self.img_size = img_size
         self.test_size = test_size
@@ -59,16 +43,7 @@ class ASLDataPreprocessor:
         print(f"Background removal: {'ENABLED' if use_background_removal else 'DISABLED'}")
     
     def remove_background(self, image):
-        """
-        Remove background using MediaPipe hand detection.
-        Sets background to black (matching live prediction).
         
-        Args:
-            image: BGR image
-            
-        Returns:
-            Image with background removed (BGR format)
-        """
         # Convert BGR to RGB for MediaPipe
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
@@ -110,25 +85,14 @@ class ASLDataPreprocessor:
         return result
     
     def load_and_preprocess_images(self, normalize=True, grayscale=False):
-        """
-        Load all images from the dataset and preprocess them
         
-        Args:
-            normalize: Whether to normalize pixel values to [0, 1]
-            grayscale: Whether to convert images to grayscale
-            
-        Returns:
-            X: Array of preprocessed images
-            y: Array of labels
-            image_paths: List of image file paths
-        """
         images = []
         labels = []
         image_paths = []
         
         skipped_count = 0
         
-        print("Loading images from dataset...")
+        print("Loading images from dataset")
         
         for class_name in self.class_names:
             class_path = self.dataset_path / class_name
@@ -196,42 +160,16 @@ class ASLDataPreprocessor:
         return X, y, image_paths
 
     def encode_labels(self, labels):
-        """
-        Encode string labels to integers
-        
-        Args:
-            labels: Array of string labels
-            
-        Returns:
-            Encoded integer labels
-        """
+       
         return self.label_encoder.transform(labels)
     
     def decode_labels(self, encoded_labels):
-        """
-        Decode integer labels back to strings
-        
-        Args:
-            encoded_labels: Array of integer labels
-            
-        Returns:
-            String labels
-        """
+       
         return self.label_encoder.inverse_transform(encoded_labels)
     
     def split_dataset(self, X, y, stratify=True):
-        """
-        Split dataset into train, validation, and test sets
         
-        Args:
-            X: Image data
-            y: Labels
-            stratify: Whether to maintain class distribution in splits
-            
-        Returns:
-            X_train, X_val, X_test, y_train, y_val, y_test
-        """
-        print("\nSplitting dataset...")
+        print("\nSplitting dataset")
         
         # Encode labels
         y_encoded = self.encode_labels(y)
@@ -259,28 +197,12 @@ class ASLDataPreprocessor:
         return X_train, X_val, X_test, y_train, y_val, y_test
     
     def get_class_distribution(self, labels):
-        """
-        Get class distribution statistics
         
-        Args:
-            labels: Array of labels (can be encoded or not)
-            
-        Returns:
-            Dictionary with class counts
-        """
         unique, counts = np.unique(labels, return_counts=True)
         return dict(zip(unique, counts))
     
     def visualize_samples(self, X, y, num_samples=16, save_path=None):
-        """
-        Visualize random samples from the dataset
         
-        Args:
-            X: Image data
-            y: Labels (encoded)
-            num_samples: Number of samples to display
-            save_path: Path to save the visualization
-        """
         indices = np.random.choice(len(X), min(num_samples, len(X)), replace=False)
         
         rows = int(np.sqrt(num_samples))
@@ -315,14 +237,7 @@ class ASLDataPreprocessor:
         plt.show()
     
     def plot_class_distribution(self, y, title="Class Distribution", save_path=None):
-        """
-        Plot class distribution
         
-        Args:
-            y: Labels (encoded)
-            title: Plot title
-            save_path: Path to save the plot
-        """
         class_dist = self.get_class_distribution(y)
         
         # Decode labels for plotting
@@ -344,14 +259,7 @@ class ASLDataPreprocessor:
         plt.show()
     
     def save_processed_data(self, X_train, X_val, X_test, y_train, y_val, y_test, output_dir='processed_data'):
-        """
-        Save processed data to disk
-        
-        Args:
-            X_train, X_val, X_test: Image data splits
-            y_train, y_val, y_test: Label splits
-            output_dir: Directory to save processed data
-        """
+       
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
         
@@ -383,15 +291,7 @@ class ASLDataPreprocessor:
         print(f"Files saved in: {output_path.absolute()}")
     
     def load_processed_data(self, data_dir='processed_data'):
-        """
-        Load previously processed data
         
-        Args:
-            data_dir: Directory containing processed data
-            
-        Returns:
-            X_train, X_val, X_test, y_train, y_val, y_test, metadata
-        """
         data_path = Path(data_dir)
         
         print(f"Loading processed data from {data_path}...")
@@ -412,9 +312,7 @@ class ASLDataPreprocessor:
 
 
 def main():
-    """
-    Main function to demonstrate data preprocessing pipeline with background removal
-    """
+    
     # Set parameters
     DATASET_PATH = 'asl_dataset'
     IMG_SIZE = (64, 64)
@@ -465,9 +363,9 @@ def main():
     if preprocessor.use_background_removal:
         preprocessor.hands.close()
     
-    print("\n" + "="*50)
+    
     print("Data preprocessing with background removal completed!")
-    print("="*50)
+  
     print("\nNext steps:")
     print("1. The processed data is saved in 'processed_data/' directory")
     print("2. Run train.py to retrain your model with background-removed images")

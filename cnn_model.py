@@ -1,7 +1,4 @@
-"""
-CNN Model for ASL Hand Gesture Recognition
-Implements a Convolutional Neural Network for classifying 36 ASL signs (0-9, a-z)
-"""
+
 
 import numpy as np
 import json
@@ -18,17 +15,11 @@ import os
 
 
 class ASLCNNModel:
-    """
-    CNN Model for ASL hand gesture recognition
-    """
+   
+    
     
     def __init__(self, metadata_path='processed_data/metadata.json'):
-        """
-        Initialize the CNN model
         
-        Args:
-            metadata_path: Path to metadata.json file containing dataset information
-        """
         # Load metadata
         with open(metadata_path, 'r') as f:
             self.metadata = json.load(f)
@@ -46,12 +37,7 @@ class ASLCNNModel:
         self.history = None
     
     def build_model(self, architecture='standard'):
-        """
-        Build the CNN model architecture
         
-        Args:
-            architecture: Model architecture type ('standard', 'deep', 'lightweight')
-        """
         print(f"\nBuilding {architecture} CNN model...")
         
         if architecture == 'standard':
@@ -67,32 +53,15 @@ class ASLCNNModel:
         return self.model
     
     def _build_standard_model(self):
-        """
-        Build a standard CNN architecture
-        
-        Architecture:
-        - Input Layer: Accepts images of shape (64, 64, 3)
-        - Conv Block 1: 32 filters
-        - Conv Block 2: 64 filters
-        - Conv Block 3: 128 filters
-        - Dense layers with dropout
-        - Output: 36 classes with softmax
-        """
+       
         model = models.Sequential(name='ASL_CNN_Standard')
         
-        # ============================================
-        # INPUT LAYER
-        # ============================================
-        # Accepts RGB images of size 64x64x3
-        # Input shape: (batch_size, 64, 64, 3)
+       
         model.add(layers.Input(shape=self.input_shape, name='input_layer'))
         
-        print(f"✓ Input Layer added: shape={self.input_shape}")
+        print(f" Input Layer added: shape={self.input_shape}")
         
-        # ============================================
-        # CONVOLUTIONAL BLOCK 1
-        # ============================================
-        # First convolutional layer: 32 filters, 3x3 kernel
+        
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_1'))
         model.add(layers.BatchNormalization(name='bn1_1'))
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_2'))
@@ -100,12 +69,9 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool1'))
         model.add(layers.Dropout(0.25, name='dropout1'))
         
-        print("✓ Conv Block 1 added: 32 filters")
+        print(" Conv Block 1 added: 32 filters")
         
-        # ============================================
-        # CONVOLUTIONAL BLOCK 2
-        # ============================================
-        # Second convolutional layer: 64 filters
+        
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_1'))
         model.add(layers.BatchNormalization(name='bn2_1'))
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_2'))
@@ -113,12 +79,9 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool2'))
         model.add(layers.Dropout(0.25, name='dropout2'))
         
-        print("✓ Conv Block 2 added: 64 filters")
+        print(" Conv Block 2 added: 64 filters")
         
-        # ============================================
-        # CONVOLUTIONAL BLOCK 3
-        # ============================================
-        # Third convolutional layer: 128 filters
+        
         model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv3_1'))
         model.add(layers.BatchNormalization(name='bn3_1'))
         model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv3_2'))
@@ -126,20 +89,14 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool3'))
         model.add(layers.Dropout(0.25, name='dropout3'))
         
-        print("✓ Conv Block 3 added: 128 filters")
+        print(" Conv Block 3 added: 128 filters")
         
-        # ============================================
-        # FLATTEN LAYER
-        # ============================================
-        # Flatten the 3D output to 1D for dense layers
+       
         model.add(layers.Flatten(name='flatten'))
         
-        print("✓ Flatten layer added")
+        print(" Flatten layer added")
         
-        # ============================================
-        # FULLY CONNECTED LAYERS
-        # ============================================
-        # Dense layer 1: 256 neurons
+        
         model.add(layers.Dense(256, activation='relu', name='dense1'))
         model.add(layers.BatchNormalization(name='bn_dense1'))
         model.add(layers.Dropout(0.5, name='dropout_dense1'))
@@ -149,22 +106,17 @@ class ASLCNNModel:
         model.add(layers.BatchNormalization(name='bn_dense2'))
         model.add(layers.Dropout(0.5, name='dropout_dense2'))
         
-        print("✓ Dense layers added: 256 and 128 neurons")
+        print(" Dense layers added: 256 and 128 neurons")
         
-        # ============================================
-        # OUTPUT LAYER
-        # ============================================
-        # Output layer: 36 neurons (one for each class) with softmax activation
+       
         model.add(layers.Dense(self.num_classes, activation='softmax', name='output_layer'))
         
-        print(f"✓ Output layer added: {self.num_classes} classes with softmax activation")
+        print(f" Output layer added: {self.num_classes} classes with softmax activation")
         
         return model
     
     def _build_deep_model(self):
-        """
-        Build a deeper CNN architecture with more layers
-        """
+        
         model = models.Sequential(name='ASL_CNN_Deep')
         
         # Input Layer
@@ -218,9 +170,7 @@ class ASLCNNModel:
         return model
     
     def _build_lightweight_model(self):
-        """
-        Build a lightweight CNN architecture for faster training/inference
-        """
+        
         model = models.Sequential(name='ASL_CNN_Lightweight')
         
         # Input Layer
@@ -252,13 +202,7 @@ class ASLCNNModel:
         return model
     
     def compile_model(self, learning_rate=0.001, optimizer='adam'):
-        """
-        Compile the model with optimizer, loss, and metrics
         
-        Args:
-            learning_rate: Learning rate for the optimizer
-            optimizer: Optimizer type ('adam', 'sgd', 'rmsprop')
-        """
         if self.model is None:
             raise ValueError("Model not built yet. Call build_model() first.")
         
@@ -281,22 +225,20 @@ class ASLCNNModel:
             metrics=['accuracy', 'top_k_categorical_accuracy']
         )
         
-        print("✓ Model compiled successfully!")
-        print(f"  - Loss: categorical_crossentropy")
-        print(f"  - Metrics: accuracy, top_k_categorical_accuracy")
+        print(" Model compiled successfully!")
+        print(f"   Loss: categorical_crossentropy")
+        print(f"  Metrics: accuracy, top_k_categorical_accuracy")
     
     def get_model_summary(self):
-        """
-        Display model architecture summary
-        """
+       
         if self.model is None:
             raise ValueError("Model not built yet. Call build_model() first.")
         
-        print("\n" + "="*70)
+        
         print("MODEL ARCHITECTURE SUMMARY")
-        print("="*70)
+       
         self.model.summary()
-        print("="*70)
+        
         
         # Calculate total parameters
         total_params = self.model.count_params()
@@ -305,15 +247,7 @@ class ASLCNNModel:
         print(f"Output Classes: {self.num_classes}")
     
     def load_data(self, data_dir='processed_data'):
-        """
-        Load preprocessed data from disk
         
-        Args:
-            data_dir: Directory containing preprocessed numpy files
-            
-        Returns:
-            X_train, X_val, X_test, y_train, y_val, y_test
-        """
         data_path = Path(data_dir)
         
         print(f"\nLoading preprocessed data from {data_path}...")
@@ -330,7 +264,7 @@ class ASLCNNModel:
         y_val_cat = to_categorical(y_val, self.num_classes)
         y_test_cat = to_categorical(y_test, self.num_classes)
         
-        print(f"✓ Data loaded successfully!")
+        print(f" Data loaded successfully!")
         print(f"  Training set: {X_train.shape}")
         print(f"  Validation set: {X_val.shape}")
         print(f"  Test set: {X_test.shape}")
@@ -342,35 +276,19 @@ class ASLCNNModel:
               use_callbacks=True,
               checkpoint_dir='checkpoints',
               log_dir='logs'):
-        """
-        Train the CNN model
         
-        Args:
-            X_train: Training images
-            y_train: Training labels (one-hot encoded)
-            X_val: Validation images
-            y_val: Validation labels (one-hot encoded)
-            epochs: Number of training epochs
-            batch_size: Batch size for training
-            use_callbacks: Whether to use training callbacks
-            checkpoint_dir: Directory to save model checkpoints
-            log_dir: Directory for TensorBoard logs
-            
-        Returns:
-            Training history
-        """
         if self.model is None:
             raise ValueError("Model not built. Call build_model() and compile_model() first.")
         
-        print("\n" + "="*70)
+        
         print("STARTING MODEL TRAINING")
-        print("="*70)
+      
         print(f"Training samples: {len(X_train)}")
         print(f"Validation samples: {len(X_val)}")
         print(f"Epochs: {epochs}")
         print(f"Batch size: {batch_size}")
         print(f"Steps per epoch: {len(X_train) // batch_size}")
-        print("="*70 + "\n")
+        
         
         # Setup callbacks
         callbacks = []
@@ -387,23 +305,14 @@ class ASLCNNModel:
             verbose=1
         )
         
-        print("\n" + "="*70)
+       
         print("TRAINING COMPLETED!")
-        print("="*70)
+        
         
         return self.history
     
     def _setup_callbacks(self, checkpoint_dir='checkpoints', log_dir='logs'):
-        """
-        Setup training callbacks
         
-        Args:
-            checkpoint_dir: Directory to save model checkpoints
-            log_dir: Directory for TensorBoard logs
-            
-        Returns:
-            List of callbacks
-        """
         # Create directories
         Path(checkpoint_dir).mkdir(exist_ok=True)
         Path(log_dir).mkdir(exist_ok=True)
@@ -422,7 +331,7 @@ class ASLCNNModel:
             verbose=1
         )
         callbacks.append(checkpoint_callback)
-        print(f"✓ ModelCheckpoint: Will save best model to {checkpoint_path}")
+        print(f"ModelCheckpoint: Will save best model to {checkpoint_path}")
         
         # EarlyStopping: Stop if no improvement
         early_stopping = EarlyStopping(
@@ -432,7 +341,7 @@ class ASLCNNModel:
             verbose=1
         )
         callbacks.append(early_stopping)
-        print(f"✓ EarlyStopping: Patience=10 epochs")
+        print(f" EarlyStopping: Patience=10 epochs")
         
         # ReduceLROnPlateau: Reduce learning rate when plateau
         reduce_lr = ReduceLROnPlateau(
@@ -443,7 +352,7 @@ class ASLCNNModel:
             verbose=1
         )
         callbacks.append(reduce_lr)
-        print(f"✓ ReduceLROnPlateau: Will reduce LR by 0.5 if no improvement for 5 epochs")
+        print(f" ReduceLROnPlateau: Will reduce LR by 0.5 if no improvement for 5 epochs")
         
         # TensorBoard: Visualization
         tensorboard_callback = TensorBoard(
@@ -452,29 +361,19 @@ class ASLCNNModel:
             write_graph=True
         )
         callbacks.append(tensorboard_callback)
-        print(f"✓ TensorBoard: Logs saved to {log_dir}/{timestamp}")
+        print(f" TensorBoard: Logs saved to {log_dir}/{timestamp}")
         print(f"  Run: tensorboard --logdir={log_dir}")
         
         return callbacks
     
     def evaluate(self, X_test, y_test, verbose=1):
-        """
-        Evaluate the model on test data
         
-        Args:
-            X_test: Test images
-            y_test: Test labels (one-hot encoded)
-            verbose: Verbosity mode
-            
-        Returns:
-            Dictionary with evaluation metrics
-        """
         if self.model is None:
             raise ValueError("Model not built yet.")
         
-        print("\n" + "="*70)
+        
         print("EVALUATING MODEL ON TEST SET")
-        print("="*70)
+        
         
         # Evaluate
         results = self.model.evaluate(X_test, y_test, verbose=verbose)
@@ -490,16 +389,7 @@ class ASLCNNModel:
         return metrics
     
     def predict(self, X, return_probabilities=False):
-        """
-        Make predictions on new data
         
-        Args:
-            X: Input images
-            return_probabilities: If True, return probabilities; else return class indices
-            
-        Returns:
-            Predictions (class indices or probabilities)
-        """
         if self.model is None:
             raise ValueError("Model not built yet.")
         
@@ -511,12 +401,7 @@ class ASLCNNModel:
             return np.argmax(predictions, axis=1)
     
     def plot_training_history(self, save_path='training_history.png'):
-        """
-        Plot training history (accuracy and loss curves)
         
-        Args:
-            save_path: Path to save the plot
-        """
         if self.history is None:
             raise ValueError("No training history available. Train the model first.")
         
@@ -549,14 +434,7 @@ class ASLCNNModel:
         plt.show()
     
     def plot_confusion_matrix(self, X_test, y_test, save_path='confusion_matrix.png'):
-        """
-        Plot confusion matrix
         
-        Args:
-            X_test: Test images
-            y_test: Test labels (one-hot encoded)
-            save_path: Path to save the plot
-        """
         from sklearn.metrics import confusion_matrix
         import seaborn as sns
         
@@ -582,12 +460,7 @@ class ASLCNNModel:
         plt.show()
     
     def save_model(self, filepath='models/asl_cnn_model.keras'):
-        """
-        Save the trained model
-        
-        Args:
-            filepath: Path to save the model
-        """
+    
         if self.model is None:
             raise ValueError("Model not built yet.")
         
@@ -598,12 +471,7 @@ class ASLCNNModel:
         print(f"✓ Model saved to {filepath}")
     
     def load_model_weights(self, filepath):
-        """
-        Load model weights from file
         
-        Args:
-            filepath: Path to the saved model
-        """
         if self.model is None:
             raise ValueError("Model not built. Call build_model() first.")
         
@@ -612,12 +480,10 @@ class ASLCNNModel:
 
 
 def main():
-    """
-    Main function to demonstrate complete training pipeline
-    """
-    print("="*70)
+    
+    
     print("ASL HAND GESTURE RECOGNITION - COMPLETE TRAINING PIPELINE")
-    print("="*70)
+    
     
     # Initialize model
     asl_model = ASLCNNModel(metadata_path='processed_data/metadata.json')

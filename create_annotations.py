@@ -1,8 +1,3 @@
-"""
-ASL Dataset Annotation Script
-Creates rich annotations for existing dataset using MediaPipe
-Stores: class label, hand landmarks, bounding box, hand side, image quality
-"""
 
 import os
 import numpy as np
@@ -13,17 +8,10 @@ import mediapipe as mp
 from tqdm import tqdm
 
 class ASLAnnotator:
-    """
-    Creates annotations for ASL hand gesture images
-    """
+    
     
     def __init__(self, dataset_path):
-        """
-        Initialize the annotator
         
-        Args:
-            dataset_path: Path to the asl_dataset folder
-        """
         self.dataset_path = Path(dataset_path)
         
         # Initialize MediaPipe Hands
@@ -37,20 +25,12 @@ class ASLAnnotator:
         # Define class names (0-9, a-z)
         self.class_names = [str(i) for i in range(10)] + [chr(i) for i in range(ord('a'), ord('z') + 1)]
         
-        print("✓ ASL Annotator initialized")
-        print(f"✓ MediaPipe Hands loaded")
-        print(f"✓ {len(self.class_names)} classes to annotate")
+        print("ASL Annotator initialized")
+        print(f" MediaPipe Hands loaded")
+        print(f" {len(self.class_names)} classes to annotate")
     
     def calculate_image_quality(self, image):
-        """
-        Calculate image quality metrics
         
-        Args:
-            image: BGR image
-            
-        Returns:
-            Dictionary with quality metrics
-        """
         # Convert to grayscale for quality calculations
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
@@ -77,15 +57,7 @@ class ASLAnnotator:
         }
     
     def extract_hand_annotations(self, image):
-        """
-        Extract hand-related annotations using MediaPipe
-        
-        Args:
-            image: BGR image
-            
-        Returns:
-            Dictionary with hand annotations or None if no hand detected
-        """
+       
         # Convert BGR to RGB for MediaPipe
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         h, w = image.shape[:2]
@@ -147,16 +119,7 @@ class ASLAnnotator:
         }
     
     def annotate_image(self, image_path, class_label):
-        """
-        Create complete annotation for a single image
         
-        Args:
-            image_path: Path to the image file
-            class_label: Class name/label for the image
-            
-        Returns:
-            Dictionary with all annotations
-        """
         try:
             # Load image
             image = cv2.imread(str(image_path))
@@ -207,18 +170,10 @@ class ASLAnnotator:
             }
     
     def annotate_dataset(self, output_file='asl_annotations.json'):
-        """
-        Annotate entire dataset
+      
         
-        Args:
-            output_file: Path to save annotations JSON file
-            
-        Returns:
-            Dictionary with all annotations
-        """
-        print("\n" + "="*70)
         print("ANNOTATING ASL DATASET")
-        print("="*70)
+        
         
         all_annotations = {
             'dataset_info': {
@@ -280,28 +235,20 @@ class ASLAnnotator:
         with open(output_path, 'w') as f:
             json.dump(all_annotations, f, indent=2)
         
-        print("\n" + "="*70)
+        
         print("ANNOTATION SUMMARY")
-        print("="*70)
+        
         print(f"Total images processed: {total_images}")
-        print(f"✓ Successful annotations: {successful_annotations}")
-        print(f"⚠ No hand detected: {no_hand_detected}")
-        print(f"✗ Failed annotations: {failed_annotations}")
-        print(f"\n✓ Annotations saved to: {output_path.absolute()}")
-        print("="*70)
+        print(f" Successful annotations: {successful_annotations}")
+        print(f"No hand detected: {no_hand_detected}")
+        print(f" Failed annotations: {failed_annotations}")
+        print(f"\n Annotations saved to: {output_path.absolute()}")
+       
         
         return all_annotations
     
     def load_annotations(self, annotation_file='asl_annotations.json'):
-        """
-        Load previously created annotations
         
-        Args:
-            annotation_file: Path to annotations JSON file
-            
-        Returns:
-            Dictionary with all annotations
-        """
         with open(annotation_file, 'r') as f:
             annotations = json.load(f)
         
@@ -309,29 +256,12 @@ class ASLAnnotator:
         return annotations
     
     def get_class_annotations(self, annotations, class_name):
-        """
-        Get all annotations for a specific class
         
-        Args:
-            annotations: Full annotations dictionary
-            class_name: Class to filter
-            
-        Returns:
-            List of annotations for the class
-        """
         return [ann for ann in annotations['annotations'] 
                 if ann['class'] == class_name]
     
     def get_annotations_with_hand(self, annotations):
-        """
-        Get only annotations where hand was detected
         
-        Args:
-            annotations: Full annotations dictionary
-            
-        Returns:
-            List of annotations with hand detected
-        """
         return [ann for ann in annotations['annotations'] 
                 if ann.get('hand_detected', False)]
     
@@ -341,22 +271,20 @@ class ASLAnnotator:
 
 
 def main():
-    """
-    Main function to annotate the ASL dataset
-    """
+    
     # Set dataset path
     DATASET_PATH = 'asl_dataset'
     OUTPUT_FILE = 'asl_annotations.json'
     
-    print("="*70)
+    
     print("ASL DATASET ANNOTATION TOOL")
-    print("="*70)
+    
     print("This will create rich annotations for your existing dataset:")
-    print("  ✓ Hand landmarks (21 points with x, y, z coordinates)")
-    print("  ✓ Bounding boxes (x, y, width, height)")
-    print("  ✓ Hand side detection (left/right)")
-    print("  ✓ Image quality metrics (blur, brightness, contrast)")
-    print("="*70 + "\n")
+    print("   Hand landmarks (21 points with x, y, z coordinates)")
+    print("  Bounding boxes (x, y, width, height)")
+    print("  Hand side detection (left/right)")
+    print("  Image quality metrics (blur, brightness, contrast)")
+   
     
     # Initialize annotator
     annotator = ASLAnnotator(dataset_path=DATASET_PATH)
@@ -365,9 +293,9 @@ def main():
     annotations = annotator.annotate_dataset(output_file=OUTPUT_FILE)
     
     # Print some sample annotations
-    print("\n" + "="*70)
+   
     print("SAMPLE ANNOTATIONS")
-    print("="*70)
+    
     
     # Get annotations with hand detected
     with_hand = annotator.get_annotations_with_hand(annotations)
@@ -380,24 +308,24 @@ def main():
         print(f"Number of Landmarks: {sample.get('num_landmarks', 0)}")
         print(f"Bounding Box: {sample.get('bbox', 'N/A')}")
         print(f"Image Quality: {sample['quality_metrics']['overall_quality']:.3f}")
-        print(f"  - Blur Score: {sample['quality_metrics']['blur_score']:.3f}")
-        print(f"  - Brightness: {sample['quality_metrics']['brightness']:.3f}")
-        print(f"  - Contrast: {sample['quality_metrics']['contrast']:.3f}")
+        print(f"   Blur Score: {sample['quality_metrics']['blur_score']:.3f}")
+        print(f"   Brightness: {sample['quality_metrics']['brightness']:.3f}")
+        print(f"   Contrast: {sample['quality_metrics']['contrast']:.3f}")
     
     # Cleanup
     annotator.cleanup()
     
-    print("\n" + "="*70)
+    
     print("ANNOTATION COMPLETE!")
-    print("="*70)
+  
     print(f"\n✓ Annotations saved to: {OUTPUT_FILE}")
     print("\nYou can now use these annotations for:")
-    print("  • Enhanced model training with metadata")
-    print("  • Error analysis and debugging")
-    print("  • Dataset quality assessment")
-    print("  • Multi-task learning (predict class + hand side)")
-    print("  • Filtering low-quality images")
-    print("="*70)
+    print("   Enhanced model training with metadata")
+    print("   Error analysis and debugging")
+    print("   Dataset quality assessment")
+    print("   Multi-task learning (predict class + hand side)")
+    print("   Filtering low-quality images")
+
 
 
 if __name__ == "__main__":
