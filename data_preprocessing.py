@@ -13,162 +13,127 @@ import json
 import mediapipe as mp
 
 class ASLDataPreprocessor:
-    
     def __init__(self, dataset_path, img_size=(64, 64), test_size=0.2, val_size=0.1, random_state=42, use_background_removal=True):
-       
         self.dataset_path = Path(dataset_path)
         self.img_size = img_size
         self.test_size = test_size
         self.val_size = val_size
         self.random_state = random_state
-        self.use_background_removal = use_background_removal
+        self.use_bg_removal = use_background_removal
         
-        # Initialize MediaPipe Hands if background removal is enabled
-        if self.use_background_removal:
+        if self.use_bg_removal:
+            # mediapipe for hand detection
             self.mp_hands = mp.solutions.hands
             self.hands = self.mp_hands.Hands(
                 static_image_mode=True,
                 max_num_hands=1,
                 min_detection_confidence=0.5
             )
-            print("✓ MediaPipe Hands initialized for background removal")
+            print("MediaPipe initialized")
         
-        # Define class names (0-9, a-z)
         self.class_names = [str(i) for i in range(10)] + [chr(i) for i in range(ord('a'), ord('z') + 1)]
-        self.label_encoder = LabelEncoder()
-        self.label_encoder.fit(self.class_names)
+        self.labelEncoder = LabelEncoder()
+        self.labelEncoder.fit(self.class_names)
         
-        print(f"Initialized preprocessor for {len(self.class_names)} classes")
-        print(f"Classes: {self.class_names}")
-        print(f"Background removal: {'ENABLED' if use_background_removal else 'DISABLED'}")
+        print(f"Preprocessor ready for {len(self.class_names)} classes")
+        print(f"Background removal: {'ON' if use_background_removal else 'OFF'}")
     
     def remove_background(self, image):
-        
-        # Convert BGR to RGB for MediaPipe
+        # this function removes the background so model focuses on hand
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Process with MediaPipe
         results = self.hands.process(rgb_image)
         
         if not results.multi_hand_landmarks:
-            # No hand detected, return original image
             return image
         
-        # Create mask
         mask = np.zeros(image.shape[:2], dtype=np.uint8)
         
-        # Get hand landmarks
         hand_landmarks = results.multi_hand_landmarks[0]
         h, w = image.shape[:2]
         
-        # Get all landmark points
-        points = []
+        pts = []
         for landmark in hand_landmarks.landmark:
             x = int(landmark.x * w)
             y = int(landmark.y * h)
-            points.append([x, y])
+            pts.append([x, y])
         
-        # Create convex hull around hand
-        points = np.array(points, dtype=np.int32)
-        hull = cv2.convexHull(points)
-        
-        # Fill the hull with white (hand region)
+        pts = np.array(pts, dtype=np.int32)
+        hull = cv2.convexHull(pts)
         cv2.fillConvexPoly(mask, hull, 255)
         
-        # Dilate mask to include hand edges
         kernel = np.ones((10, 10), np.uint8)
         mask = cv2.dilate(mask, kernel, iterations=3)
         
-        # Apply mask: keep hand, make background black
         result = cv2.bitwise_and(image, image, mask=mask)
         
         return result
     
     def load_and_preprocess_images(self, normalize=True, grayscale=False):
-        
-        images = []
+        imgs = []
         labels = []
-        image_paths = []
+        image_paths = []  
+        skipped = 0
         
-        skipped_count = 0
-        
-        print("Loading images from dataset")
+        print("Loading images")  
         
         for class_name in self.class_names:
             class_path = self.dataset_path / class_name
             
             if not class_path.exists():
-                print(f"Warning: Class folder '{class_name}' not found!")
+                print(f"Warning: Class folder '{class_name}' not found")
                 continue
             
             image_files = list(class_path.glob('*.jpeg')) + list(class_path.glob('*.jpg')) + list(class_path.glob('*.png'))
             
-            print(f"Loading {len(image_files)} images for class '{class_name}'...")
+            print(f"Class '{class_name}': {len(image_files)} images")
             
             for img_path in image_files:
                 try:
-                    # Load image
                     img = cv2.imread(str(img_path))
                     
                     if img is None:
-                        print(f"Warning: Could not load {img_path}")
-                        skipped_count += 1
+                        skipped += 1
                         continue
                     
-                    # Apply background removal if enabled
-                    if self.use_background_removal:
+                    if self.use_bg_removal:
                         img = self.remove_background(img)
-                        
-                        # Check if image is completely black (no hand detected)
                         if np.sum(img) == 0:
-                            skipped_count += 1
+                            skipped += 1
                             continue
                     
-                    # Convert BGR to RGB
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     
-                    # Convert to grayscale if requested
                     if grayscale:
                         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
                     
-                    # Resize image
                     img = cv2.resize(img, self.img_size)
                     
-                    # Normalize if requested
-                    if normalize:
-                        img = img.astype(np.float32) / 255.0
+                    if normalize:  # always normalize for neural networks
+                        img = img.astype(np.float32) / 255.0  # scale to 0-1
                     
-                    images.append(img)
+                    imgs.append(img)
                     labels.append(class_name)
                     image_paths.append(str(img_path))
                     
                 except Exception as e:
-                    print(f"Error processing {img_path}: {e}")
-                    skipped_count += 1
+                    skipped += 1
                     continue
         
-        # Convert to numpy arrays
-        X = np.array(images)
+        img_data = np.array(imgs)
         y = np.array(labels)
         
-        print(f"\nDataset loaded successfully!")
-        print(f"Total images: {len(X)}")
-        print(f"Skipped images: {skipped_count}")
-        print(f"Image shape: {X.shape}")
-        print(f"Data type: {X.dtype}")
+        print(f"\nLoaded {len(img_data)} images (skipped {skipped})")
+        print(f"Shape: {img_data.shape}, dtype: {img_data.dtype}")
         
-        return X, y, image_paths
+        return img_data, y, image_paths
 
     def encode_labels(self, labels):
-       
-        return self.label_encoder.transform(labels)
+        return self.labelEncoder.transform(labels)
     
     def decode_labels(self, encoded_labels):
-       
-        return self.label_encoder.inverse_transform(encoded_labels)
+        return self.labelEncoder.inverse_transform(encoded_labels)
     
     def split_dataset(self, X, y, stratify=True):
-        
         print("\nSplitting dataset")
         
         # Encode labels
@@ -197,12 +162,10 @@ class ASLDataPreprocessor:
         return X_train, X_val, X_test, y_train, y_val, y_test
     
     def get_class_distribution(self, labels):
-        
         unique, counts = np.unique(labels, return_counts=True)
         return dict(zip(unique, counts))
     
     def visualize_samples(self, X, y, num_samples=16, save_path=None):
-        
         indices = np.random.choice(len(X), min(num_samples, len(X)), replace=False)
         
         rows = int(np.sqrt(num_samples))
@@ -237,18 +200,15 @@ class ASLDataPreprocessor:
         plt.show()
     
     def plot_class_distribution(self, y, title="Class Distribution", save_path=None):
-        
         class_dist = self.get_class_distribution(y)
-        
-        # Decode labels for plotting
         decoded_labels = self.decode_labels(list(class_dist.keys()))
         counts = list(class_dist.values())
         
         plt.figure(figsize=(20, 6))
         plt.bar(decoded_labels, counts, color='skyblue', edgecolor='navy')
-        plt.xlabel('Class', fontsize=12)
-        plt.ylabel('Number of Images', fontsize=12)
-        plt.title(title, fontsize=14, fontweight='bold')
+        plt.xlabel('Class')
+        plt.ylabel('Count')
+        plt.title(title)
         plt.xticks(rotation=0)
         plt.grid(axis='y', alpha=0.3)
         
@@ -259,13 +219,10 @@ class ASLDataPreprocessor:
         plt.show()
     
     def save_processed_data(self, X_train, X_val, X_test, y_train, y_val, y_test, output_dir='processed_data'):
-       
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
         
-        print(f"\nSaving processed data to {output_path}...")
-        
-        # Save data as numpy arrays
+        print(f"\nSaving to {output_path}")
         np.save(output_path / 'X_train.npy', X_train)
         np.save(output_path / 'X_val.npy', X_val)
         np.save(output_path / 'X_test.npy', X_test)
@@ -287,14 +244,12 @@ class ASLDataPreprocessor:
         with open(output_path / 'metadata.json', 'w') as f:
             json.dump(metadata, f, indent=4)
         
-        print("Data saved successfully!")
-        print(f"Files saved in: {output_path.absolute()}")
+        print("Saved!")
+        print(f"Location: {output_path.absolute()}")
     
     def load_processed_data(self, data_dir='processed_data'):
-        
         data_path = Path(data_dir)
-        
-        print(f"Loading processed data from {data_path}...")
+        print(f"Loading from {data_path}...")
         
         X_train = np.load(data_path / 'X_train.npy')
         X_val = np.load(data_path / 'X_val.npy')
@@ -306,20 +261,17 @@ class ASLDataPreprocessor:
         with open(data_path / 'metadata.json', 'r') as f:
             metadata = json.load(f)
         
-        print("Data loaded successfully!")
+        print("Data loaded successfully")
         
         return X_train, X_val, X_test, y_train, y_val, y_test, metadata
 
 
 def main():
-    
-    # Set parameters
     DATASET_PATH = 'asl_dataset'
     IMG_SIZE = (64, 64)
     GRAYSCALE = True
-    USE_BACKGROUND_REMOVAL = True  # Enable background removal to match live prediction
+    USE_BACKGROUND_REMOVAL = True
     
-    # Initialize preprocessor
     preprocessor = ASLDataPreprocessor(
         dataset_path=DATASET_PATH,
         img_size=IMG_SIZE,
@@ -329,47 +281,34 @@ def main():
         use_background_removal=USE_BACKGROUND_REMOVAL
     )
     
-    # Load and preprocess images
     X, y, image_paths = preprocessor.load_and_preprocess_images(
         normalize=True,
         grayscale=GRAYSCALE
     )
     
-    # Add channel dimension for grayscale images if needed
     if GRAYSCALE and len(X.shape) == 3:
         X = np.expand_dims(X, axis=-1)
-        print(f"Added channel dimension. New shape: {X.shape}")
+        print(f"Added channel dim: {X.shape}")
     
-    # Split dataset
     X_train, X_val, X_test, y_train, y_val, y_test = preprocessor.split_dataset(X, y, stratify=True)
     
-    # Visualize class distribution
     print("\nClass distribution in training set:")
     train_dist = preprocessor.get_class_distribution(y_train)
     for label, count in sorted(train_dist.items()):
         decoded_label = preprocessor.decode_labels([label])[0]
         print(f"  Class '{decoded_label}': {count} images")
     
-    # Plot class distribution
     preprocessor.plot_class_distribution(y_train, title="Training Set Class Distribution (With Background Removal)", save_path="train_distribution.png")
     
-    # Visualize sample images
     preprocessor.visualize_samples(X_train, y_train, num_samples=16, save_path="sample_images.png")
     
-    # Save processed data
     preprocessor.save_processed_data(X_train, X_val, X_test, y_train, y_val, y_test)
     
-    # Close MediaPipe
-    if preprocessor.use_background_removal:
+    if preprocessor.use_bg_removal:
         preprocessor.hands.close()
     
-    
-    print("Data preprocessing with background removal completed!")
-  
-    print("\nNext steps:")
-    print("1. The processed data is saved in 'processed_data/' directory")
-    print("2. Run train.py to retrain your model with background-removed images")
-    print("3. The new model will match your live prediction preprocessing")
+    print("\nPreprocessing done!")
+    print("Next: run train.py to train the model")
 
 
 if __name__ == "__main__":

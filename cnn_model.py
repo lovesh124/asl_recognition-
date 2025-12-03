@@ -14,33 +14,27 @@ from datetime import datetime
 import os
 
 
+# CNN model for ASL recognition
 class ASLCNNModel:
-   
-    
-    
     def __init__(self, metadata_path='processed_data/metadata.json'):
-        
-        # Load metadata
+        # load info about the dataset
         with open(metadata_path, 'r') as f:
             self.metadata = json.load(f)
         
         self.input_shape = tuple(self.metadata['input_shape'])
         self.num_classes = self.metadata['num_classes']
-        self.class_names = self.metadata['class_names']
+        self.classNames = self.metadata['class_names']
         
-        print(f"Initialized ASL CNN Model")
         print(f"Input shape: {self.input_shape}")
-        print(f"Number of classes: {self.num_classes}")
-        print(f"Classes: {self.class_names}")
+        print(f"Num classes: {self.num_classes}")
         
         self.model = None
         self.history = None
     
     def build_model(self, architecture='standard'):
+        print(f"\nBuilding {architecture} model")
         
-        print(f"\nBuilding {architecture} CNN model...")
-        
-        if architecture == 'standard':
+        if architecture == 'standard':  # this one is the best
             self.model = self._build_standard_model()
         elif architecture == 'deep':
             self.model = self._build_deep_model()
@@ -49,38 +43,30 @@ class ASLCNNModel:
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
         
-        print("Model built successfully!")
+        print("done")
         return self.model
     
     def _build_standard_model(self):
-       
+        # tried a bunch of different architectures, this one gave best results
         model = models.Sequential(name='ASL_CNN_Standard')
         
-       
         model.add(layers.Input(shape=self.input_shape, name='input_layer'))
         
-        print(f" Input Layer added: shape={self.input_shape}")
-        
-        
+        # first conv block
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_1'))
         model.add(layers.BatchNormalization(name='bn1_1'))
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_2'))
         model.add(layers.BatchNormalization(name='bn1_2'))
         model.add(layers.MaxPooling2D((2, 2), name='pool1'))
-        model.add(layers.Dropout(0.25, name='dropout1'))
+        model.add(layers.Dropout(0.25, name='dropout1'))  # helps prevent overfitting
         
-        print(" Conv Block 1 added: 32 filters")
-        
-        
+        # second block with more filters
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_1'))
         model.add(layers.BatchNormalization(name='bn2_1'))
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_2'))
         model.add(layers.BatchNormalization(name='bn2_2'))
         model.add(layers.MaxPooling2D((2, 2), name='pool2'))
         model.add(layers.Dropout(0.25, name='dropout2'))
-        
-        print(" Conv Block 2 added: 64 filters")
-        
         
         model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv3_1'))
         model.add(layers.BatchNormalization(name='bn3_1'))
@@ -89,40 +75,25 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool3'))
         model.add(layers.Dropout(0.25, name='dropout3'))
         
-        print(" Conv Block 3 added: 128 filters")
-        
-       
         model.add(layers.Flatten(name='flatten'))
-        
-        print(" Flatten layer added")
-        
         
         model.add(layers.Dense(256, activation='relu', name='dense1'))
         model.add(layers.BatchNormalization(name='bn_dense1'))
         model.add(layers.Dropout(0.5, name='dropout_dense1'))
         
-        # Dense layer 2: 128 neurons
         model.add(layers.Dense(128, activation='relu', name='dense2'))
         model.add(layers.BatchNormalization(name='bn_dense2'))
         model.add(layers.Dropout(0.5, name='dropout_dense2'))
         
-        print(" Dense layers added: 256 and 128 neurons")
-        
-       
         model.add(layers.Dense(self.num_classes, activation='softmax', name='output_layer'))
-        
-        print(f" Output layer added: {self.num_classes} classes with softmax activation")
         
         return model
     
     def _build_deep_model(self):
-        
         model = models.Sequential(name='ASL_CNN_Deep')
         
-        # Input Layer
         model.add(layers.Input(shape=self.input_shape, name='input_layer'))
         
-        # Conv Block 1: 32 filters
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_1'))
         model.add(layers.BatchNormalization(name='bn1_1'))
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv1_2'))
@@ -130,7 +101,6 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool1'))
         model.add(layers.Dropout(0.2, name='dropout1'))
         
-        # Conv Block 2: 64 filters
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_1'))
         model.add(layers.BatchNormalization(name='bn2_1'))
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv2_2'))
@@ -138,7 +108,6 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool2'))
         model.add(layers.Dropout(0.25, name='dropout2'))
         
-        # Conv Block 3: 128 filters
         model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv3_1'))
         model.add(layers.BatchNormalization(name='bn3_1'))
         model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv3_2'))
@@ -146,7 +115,6 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool3'))
         model.add(layers.Dropout(0.3, name='dropout3'))
         
-        # Conv Block 4: 256 filters
         model.add(layers.Conv2D(256, (3, 3), activation='relu', padding='same', name='conv4_1'))
         model.add(layers.BatchNormalization(name='bn4_1'))
         model.add(layers.Conv2D(256, (3, 3), activation='relu', padding='same', name='conv4_2'))
@@ -154,7 +122,6 @@ class ASLCNNModel:
         model.add(layers.MaxPooling2D((2, 2), name='pool4'))
         model.add(layers.Dropout(0.3, name='dropout4'))
         
-        # Flatten and Dense layers
         model.add(layers.Flatten(name='flatten'))
         model.add(layers.Dense(512, activation='relu', name='dense1'))
         model.add(layers.BatchNormalization(name='bn_dense1'))
@@ -164,51 +131,41 @@ class ASLCNNModel:
         model.add(layers.BatchNormalization(name='bn_dense2'))
         model.add(layers.Dropout(0.5, name='dropout_dense2'))
         
-        # Output layer
         model.add(layers.Dense(self.num_classes, activation='softmax', name='output_layer'))
         
         return model
     
     def _build_lightweight_model(self):
-        
         model = models.Sequential(name='ASL_CNN_Lightweight')
         
-        # Input Layer
         model.add(layers.Input(shape=self.input_shape, name='input_layer'))
         
-        # Conv Block 1: 16 filters
         model.add(layers.Conv2D(16, (3, 3), activation='relu', padding='same', name='conv1'))
         model.add(layers.MaxPooling2D((2, 2), name='pool1'))
         model.add(layers.Dropout(0.2, name='dropout1'))
         
-        # Conv Block 2: 32 filters
         model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='conv2'))
         model.add(layers.MaxPooling2D((2, 2), name='pool2'))
         model.add(layers.Dropout(0.2, name='dropout2'))
         
-        # Conv Block 3: 64 filters
         model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv3'))
         model.add(layers.MaxPooling2D((2, 2), name='pool3'))
         model.add(layers.Dropout(0.3, name='dropout3'))
         
-        # Flatten and Dense layers
         model.add(layers.Flatten(name='flatten'))
         model.add(layers.Dense(128, activation='relu', name='dense1'))
         model.add(layers.Dropout(0.5, name='dropout_dense1'))
         
-        # Output layer
         model.add(layers.Dense(self.num_classes, activation='softmax', name='output_layer'))
         
         return model
     
     def compile_model(self, learning_rate=0.001, optimizer='adam'):
-        
         if self.model is None:
             raise ValueError("Model not built yet. Call build_model() first.")
         
-        print(f"\nCompiling model with {optimizer} optimizer (lr={learning_rate})...")
+        print(f"\nCompiling with {optimizer}, lr={learning_rate}")
         
-        # Choose optimizer
         if optimizer.lower() == 'adam':
             opt = Adam(learning_rate=learning_rate)
         elif optimizer.lower() == 'sgd':
@@ -218,39 +175,27 @@ class ASLCNNModel:
         else:
             raise ValueError(f"Unknown optimizer: {optimizer}")
         
-        # Compile model
         self.model.compile(
             optimizer=opt,
             loss='categorical_crossentropy',
             metrics=['accuracy', 'top_k_categorical_accuracy']
         )
         
-        print(" Model compiled successfully!")
-        print(f"   Loss: categorical_crossentropy")
-        print(f"  Metrics: accuracy, top_k_categorical_accuracy")
+        print("compiled")
     
     def get_model_summary(self):
-       
         if self.model is None:
             raise ValueError("Model not built yet. Call build_model() first.")
         
-        
-        print("MODEL ARCHITECTURE SUMMARY")
-       
         self.model.summary()
         
-        
-        # Calculate total parameters
         total_params = self.model.count_params()
-        print(f"\nTotal Parameters: {total_params:,}")
-        print(f"Input Shape: {self.input_shape}")
-        print(f"Output Classes: {self.num_classes}")
+        print(f"\nTotal params: {total_params:,}")
+        print(f"Input: {self.input_shape}, Output: {self.num_classes} classes")
     
     def load_data(self, data_dir='processed_data'):
-        
         data_path = Path(data_dir)
-        
-        print(f"\nLoading preprocessed data from {data_path}...")
+        print(f"\nLoading data from {data_path}...")
         
         X_train = np.load(data_path / 'X_train.npy')
         X_val = np.load(data_path / 'X_val.npy')
@@ -259,15 +204,11 @@ class ASLCNNModel:
         y_val = np.load(data_path / 'y_val.npy')
         y_test = np.load(data_path / 'y_test.npy')
         
-        # Convert labels to categorical (one-hot encoding)
         y_train_cat = to_categorical(y_train, self.num_classes)
         y_val_cat = to_categorical(y_val, self.num_classes)
         y_test_cat = to_categorical(y_test, self.num_classes)
         
-        print(f" Data loaded successfully!")
-        print(f"  Training set: {X_train.shape}")
-        print(f"  Validation set: {X_val.shape}")
-        print(f"  Test set: {X_test.shape}")
+        print(f"Training: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
         
         return X_train, X_val, X_test, y_train_cat, y_val_cat, y_test_cat
     
@@ -276,26 +217,18 @@ class ASLCNNModel:
               use_callbacks=True,
               checkpoint_dir='checkpoints',
               log_dir='logs'):
-        
         if self.model is None:
             raise ValueError("Model not built. Call build_model() and compile_model() first.")
         
+        print("\n=== Starting Training ===")
+        print(f"Train: {len(X_train)}, Val: {len(X_val)}")
+        print(f"Epochs: {epochs}, Batch size: {batch_size}")
         
-        print("STARTING MODEL TRAINING")
-      
-        print(f"Training samples: {len(X_train)}")
-        print(f"Validation samples: {len(X_val)}")
-        print(f"Epochs: {epochs}")
-        print(f"Batch size: {batch_size}")
-        print(f"Steps per epoch: {len(X_train) // batch_size}")
-        
-        
-        # Setup callbacks
         callbacks = []
         if use_callbacks:
             callbacks = self._setup_callbacks(checkpoint_dir, log_dir)
         
-        # Train the model
+        # train
         self.history = self.model.fit(
             X_train, y_train,
             validation_data=(X_val, y_val),
@@ -305,23 +238,18 @@ class ASLCNNModel:
             verbose=1
         )
         
-       
-        print("TRAINING COMPLETED!")
+        print("\nTraining done!")
         
         
         return self.history
     
     def _setup_callbacks(self, checkpoint_dir='checkpoints', log_dir='logs'):
-        
-        # Create directories
         Path(checkpoint_dir).mkdir(exist_ok=True)
         Path(log_dir).mkdir(exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # timestamp for unique filenames
+        callbacks = []  # list of callbacks to use during training
         
-        callbacks = []
-        
-        # ModelCheckpoint: Save best model
         checkpoint_path = f"{checkpoint_dir}/best_model_{timestamp}.keras"
         checkpoint_callback = ModelCheckpoint(
             checkpoint_path,
@@ -331,19 +259,17 @@ class ASLCNNModel:
             verbose=1
         )
         callbacks.append(checkpoint_callback)
-        print(f"ModelCheckpoint: Will save best model to {checkpoint_path}")
+        print(f"Checkpoint: {checkpoint_path}")
         
-        # EarlyStopping: Stop if no improvement
+        # stop if validation loss doesn't improve
         early_stopping = EarlyStopping(
             monitor='val_loss',
-            patience=10,
+            patience=10,  # wait 10 epochs before stopping
             restore_best_weights=True,
             verbose=1
         )
         callbacks.append(early_stopping)
-        print(f" EarlyStopping: Patience=10 epochs")
         
-        # ReduceLROnPlateau: Reduce learning rate when plateau
         reduce_lr = ReduceLROnPlateau(
             monitor='val_loss',
             factor=0.5,
@@ -352,44 +278,33 @@ class ASLCNNModel:
             verbose=1
         )
         callbacks.append(reduce_lr)
-        print(f" ReduceLROnPlateau: Will reduce LR by 0.5 if no improvement for 5 epochs")
         
-        # TensorBoard: Visualization
         tensorboard_callback = TensorBoard(
             log_dir=f"{log_dir}/{timestamp}",
             histogram_freq=1,
             write_graph=True
         )
         callbacks.append(tensorboard_callback)
-        print(f" TensorBoard: Logs saved to {log_dir}/{timestamp}")
-        print(f"  Run: tensorboard --logdir={log_dir}")
+        print(f"TensorBoard logs: {log_dir}/{timestamp}")
+        print(f"Run: tensorboard --logdir={log_dir}")
         
         return callbacks
     
     def evaluate(self, X_test, y_test, verbose=1):
-        
         if self.model is None:
             raise ValueError("Model not built yet.")
         
-        
-        print("EVALUATING MODEL ON TEST SET")
-        
-        
-        # Evaluate
+        print("\nEvaluating on test set")
         results = self.model.evaluate(X_test, y_test, verbose=verbose)
         
-        # Get metric names and values
         metrics = {}
         for name, value in zip(self.model.metrics_names, results):
             metrics[name] = value
             print(f"{name}: {value:.4f}")
         
-        print("="*70)
-        
         return metrics
     
     def predict(self, X, return_probabilities=False):
-        
         if self.model is None:
             raise ValueError("Model not built yet.")
         
@@ -401,7 +316,6 @@ class ASLCNNModel:
             return np.argmax(predictions, axis=1)
     
     def plot_training_history(self, save_path='training_history.png'):
-        
         if self.history is None:
             raise ValueError("No training history available. Train the model first.")
         
@@ -410,31 +324,30 @@ class ASLCNNModel:
         
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
         
-        # Plot accuracy
-        ax1.plot(epochs_range, history['accuracy'], 'b-', label='Training Accuracy', linewidth=2)
-        ax1.plot(epochs_range, history['val_accuracy'], 'r-', label='Validation Accuracy', linewidth=2)
-        ax1.set_title('Model Accuracy', fontsize=14, fontweight='bold')
-        ax1.set_xlabel('Epoch', fontsize=12)
-        ax1.set_ylabel('Accuracy', fontsize=12)
-        ax1.legend(loc='lower right')
+        # accuracy
+        ax1.plot(epochs_range, history['accuracy'], 'b-', label='Training', linewidth=2)
+        ax1.plot(epochs_range, history['val_accuracy'], 'r-', label='Validation', linewidth=2)
+        ax1.set_title('Accuracy')
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Accuracy')
+        ax1.legend()
         ax1.grid(True, alpha=0.3)
         
-        # Plot loss
-        ax2.plot(epochs_range, history['loss'], 'b-', label='Training Loss', linewidth=2)
-        ax2.plot(epochs_range, history['val_loss'], 'r-', label='Validation Loss', linewidth=2)
-        ax2.set_title('Model Loss', fontsize=14, fontweight='bold')
-        ax2.set_xlabel('Epoch', fontsize=12)
-        ax2.set_ylabel('Loss', fontsize=12)
-        ax2.legend(loc='upper right')
+        # loss
+        ax2.plot(epochs_range, history['loss'], 'b-', label='Training', linewidth=2)
+        ax2.plot(epochs_range, history['val_loss'], 'r-', label='Validation', linewidth=2)
+        ax2.set_title('Loss')
+        ax2.set_xlabel('Epoch')
+        ax2.set_ylabel('Loss')
+        ax2.legend()
         ax2.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        print(f"\n✓ Training history plot saved to {save_path}")
+        print(f"Saved to {save_path}")
         plt.show()
     
     def plot_confusion_matrix(self, X_test, y_test, save_path='confusion_matrix.png'):
-        
         from sklearn.metrics import confusion_matrix
         import seaborn as sns
         
@@ -451,56 +364,41 @@ class ASLCNNModel:
                     xticklabels=self.class_names, 
                     yticklabels=self.class_names,
                     cbar_kws={'label': 'Count'})
-        plt.title('Confusion Matrix', fontsize=16, fontweight='bold', pad=20)
-        plt.xlabel('Predicted Label', fontsize=14)
-        plt.ylabel('True Label', fontsize=14)
+        plt.title('Confusion Matrix')
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
         plt.tight_layout()
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        print(f"✓ Confusion matrix saved to {save_path}")
+        print(f"Saved to {save_path}")
         plt.show()
     
     def save_model(self, filepath='models/asl_cnn_model.keras'):
-    
         if self.model is None:
             raise ValueError("Model not built yet.")
         
-        # Create directory if it doesn't exist
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-        
         self.model.save(filepath)
-        print(f"✓ Model saved to {filepath}")
+        print(f"Model saved to {filepath}")
     
     def load_model_weights(self, filepath):
-        
         if self.model is None:
             raise ValueError("Model not built. Call build_model() first.")
         
         self.model.load_weights(filepath)
-        print(f"✓ Model weights loaded from {filepath}")
+        print(f"Loaded weights from {filepath}")
 
 
 def main():
+    print("ASL Hand Recognition Training")
+    print("asl hand reconization")
     
-    
-    print("ASL HAND GESTURE RECOGNITION - COMPLETE TRAINING PIPELINE")
-    
-    
-    # Initialize model
     asl_model = ASLCNNModel(metadata_path='processed_data/metadata.json')
-    
-    # Build model
     asl_model.build_model(architecture='standard')
-    
-    # Display model summary
     asl_model.get_model_summary()
-    
-    # Compile model
     asl_model.compile_model(learning_rate=0.001, optimizer='adam')
     
-    # Load data
     X_train, X_val, X_test, y_train, y_val, y_test = asl_model.load_data('processed_data')
     
-    # Train model
     history = asl_model.train(
         X_train, y_train,
         X_val, y_val,
@@ -509,27 +407,19 @@ def main():
         use_callbacks=True
     )
     
-    # Plot training history
+    # plot results
     asl_model.plot_training_history(save_path='training_history.png')
-    
-    # Evaluate on test set
     test_metrics = asl_model.evaluate(X_test, y_test)
-    
-    # Plot confusion matrix
     asl_model.plot_confusion_matrix(X_test, y_test, save_path='confusion_matrix.png')
     
-    # Save the trained model
+    # save model
     asl_model.save_model('models/asl_cnn_final.keras')
     
-    print("\n" + "="*70)
-    print("TRAINING PIPELINE COMPLETED SUCCESSFULLY!")
-    print("="*70)
-    print("\nGenerated files:")
-    print("  - training_history.png: Training curves")
-    print("  - confusion_matrix.png: Confusion matrix")
-    print("  - models/asl_cnn_final.keras: Trained model")
-    print("  - checkpoints/: Best model checkpoints")
-    print("  - logs/: TensorBoard logs")
+    print("\nDone! Files generated:")
+    print(" - training_history.png")
+    print(" - confusion_matrix.png")
+    print(" - models/asl_cnn_final.keras")
+    print(" - checkpoints/ and logs/")
 
 
 if __name__ == "__main__":
