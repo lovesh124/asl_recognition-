@@ -35,8 +35,7 @@ class ASLDataPreprocessor:
         self.labelEncoder = LabelEncoder()
         self.labelEncoder.fit(self.class_names)
         
-        print(f"Preprocessor ready for {len(self.class_names)} classes")
-        print(f"Background removal: {'ON' if use_background_removal else 'OFF'}")
+        print(f"Preprocessor: {len(self.class_names)} classes, bg_removal={'on' if use_background_removal else 'off'}")
     
     def remove_background(self, image):
         # this function removes the background so model focuses on hand
@@ -88,36 +87,31 @@ class ASLDataPreprocessor:
             print(f"Class '{class_name}': {len(image_files)} images")
             
             for img_path in image_files:
-                try:
-                    img = cv2.imread(str(img_path))
-                    
-                    if img is None:
-                        skipped += 1
-                        continue
-                    
-                    if self.use_bg_removal:
-                        img = self.remove_background(img)
-                        if np.sum(img) == 0:
-                            skipped += 1
-                            continue
-                    
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    
-                    if grayscale:
-                        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-                    
-                    img = cv2.resize(img, self.img_size)
-                    
-                    if normalize:  # always normalize for neural networks
-                        img = img.astype(np.float32) / 255.0  # scale to 0-1
-                    
-                    imgs.append(img)
-                    labels.append(class_name)
-                    image_paths.append(str(img_path))
-                    
-                except Exception as e:
+                img = cv2.imread(str(img_path))
+                
+                if img is None:
                     skipped += 1
                     continue
+                
+                if self.use_bg_removal:
+                    img = self.remove_background(img)
+                    if np.sum(img) == 0:
+                        skipped += 1
+                        continue
+                
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
+                if grayscale:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+                
+                img = cv2.resize(img, self.img_size)
+                
+                if normalize:  # always normalize for neural networks
+                    img = img.astype(np.float32) / 255.0  # scale to 0-1
+                
+                imgs.append(img)
+                labels.append(class_name)
+                image_paths.append(str(img_path))
         
         img_data = np.array(imgs)
         y = np.array(labels)

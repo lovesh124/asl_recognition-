@@ -20,9 +20,8 @@ def find_latest_checkpoint(checkpoint_dir='checkpoints'):
 
 
 def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_rate=0.001, resume_from=None):
-    print("ASL Training")
-    print(f"Architecture: {architecture}")  # standard works best for me
-    print(f"Epochs: {epochs}, Batch: {batch_size}, LR: {learning_rate}")
+    print(f"Training ASL model ({architecture})")
+    print(f"epochs={epochs}, batch={batch_size}, lr={learning_rate}")
     
     model = ASLCNNModel(metadata_path='processed_data/metadata.json')
     model.build_model(architecture=architecture)
@@ -57,16 +56,9 @@ def train_asl_model(architecture='standard', epochs=50, batch_size=32, learning_
     
     model.save_model('models/asl_cnn_final.keras')
     
-    print("Training Complete")
-    print(f"Test Accuracy: {test_results['accuracy']*100:.2f}%")
-    print(f"Test Loss: {test_results['loss']:.4f}%")
-    print("\nFiles:")
-    print("  training_history.png")
-    print("  confusion_matrix.png")
-    print("  models/asl_cnn_final.keras")
-    print(" checkpoints/ (best models)")
-    print(" logs/ (tensorboard)")
-    print("\nView logs: tensorboard --logdir=logs")
+    
+    print(f"Accuracy: {test_results['accuracy']*100:.2f}%, Loss: {test_results['loss']:.4f}")
+    print(f"Model saved to models/asl_cnn_final.keras")
 
 
 if __name__ == "__main__":

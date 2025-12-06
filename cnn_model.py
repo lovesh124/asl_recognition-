@@ -32,8 +32,6 @@ class ASLCNNModel:
         self.history = None
     
     def build_model(self, architecture='standard'):
-        print(f"\nBuilding {architecture} model")
-        
         if architecture == 'standard':  # this one is the best
             self.model = self._build_standard_model()
         elif architecture == 'deep':
@@ -43,7 +41,6 @@ class ASLCNNModel:
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
         
-        print("done")
         return self.model
     
     def _build_standard_model(self):
@@ -164,7 +161,7 @@ class ASLCNNModel:
         if self.model is None:
             raise ValueError("Model not built yet. Call build_model() first.")
         
-        print(f"\nCompiling with {optimizer}, lr={learning_rate}")
+        # compile model
         
         if optimizer.lower() == 'adam':
             opt = Adam(learning_rate=learning_rate)
@@ -180,8 +177,6 @@ class ASLCNNModel:
             loss='categorical_crossentropy',
             metrics=['accuracy', 'top_k_categorical_accuracy']
         )
-        
-        print("compiled")
     
     def get_model_summary(self):
         if self.model is None:
@@ -220,9 +215,7 @@ class ASLCNNModel:
         if self.model is None:
             raise ValueError("Model not built. Call build_model() and compile_model() first.")
         
-        print("\n=== Starting Training ===")
-        print(f"Train: {len(X_train)}, Val: {len(X_val)}")
-        print(f"Epochs: {epochs}, Batch size: {batch_size}")
+        print(f"\nTraining {len(X_train)} samples")
         
         callbacks = []
         if use_callbacks:
@@ -237,9 +230,6 @@ class ASLCNNModel:
             callbacks=callbacks,
             verbose=1
         )
-        
-        print("\nTraining done!")
-        
         
         return self.history
     
